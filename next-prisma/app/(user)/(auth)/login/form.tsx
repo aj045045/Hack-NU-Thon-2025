@@ -1,6 +1,6 @@
 "use client"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { zodResolver } from "@hookform/resolvers/zod" // Install with: npm install @hookform/resolvers
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import Link from "next/link"
 import { pageLinks } from "@/constants/links"
 // import { UtilityHandler } from "@/helpers/form-handler"
-import * as z from "zod"
+import * as z from "zod" // Install with: npm install zod
 import { loginFormScheme } from "@/lib/form"
 import { signIn } from "next-auth/react";
 
