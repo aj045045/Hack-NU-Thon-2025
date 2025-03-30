@@ -17,7 +17,7 @@ import { OTPGeneratorUtil } from "@/helpers/otp-generator"
 import { toast } from "sonner"
 
 
-export function LoginForm() {
+export function ForgetPasswordForm() {
     const [sendOTP, setSendOTP] = useState(false);
 
     const form = useForm<z.infer<typeof forgetPasswordFormScheme>>({
@@ -47,7 +47,7 @@ export function LoginForm() {
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit((payload) =>
-                UtilityHandler.onSubmitPost('/api/auth', payload, `Handling Sign-Up Form Submission`, 'You have successfully sign up try to login'))}
+                UtilityHandler.onSubmitPut('/api/auth', payload, `Trying to update your password`, 'You have successfully update for password try to login'))}
                 className="row-span-2 py-10 mx-auto space-y-8 text-green-950">
                 <div>
                     <div className="font-sans text-3xl">Forget Password</div>

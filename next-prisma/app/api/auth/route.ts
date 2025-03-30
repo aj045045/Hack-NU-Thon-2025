@@ -2,27 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
-import { signUpFromScheme } from '@/lib/form';
+import { forgetPasswordFormScheme, signUpFormSchema } from '@/lib/form';
+import { AccountType } from '@prisma/client';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(1, 'Password is required'),
-});
-
-const updateSchema = z.object({
-  id: z.string(),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-});
-
-
-// Sign-up User
+// Sign-up User API
 export async function POST(req: NextRequest) {
   try {
     const body: unknown = await req.json();
     // Validate input
-    const validatedData = signUpFromScheme.parse(body);
-    const { email_id, pin, sendPin, user_name, password } = validatedData;
+    const validatedData = signUpFormSchema.parse(body);
+    const { email_id, pin, sendPin, user_name, password, account_number, account_type } = validatedData;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -35,28 +24,33 @@ export async function POST(req: NextRequest) {
         { status: 409 }
       );
     }
+
+    // Validate OTP
     if (sendPin !== pin) {
       return NextResponse.json(
-        { message: "Invalid OTP" },
-        { status: 409 }
+        { message: 'Invalid OTP' },
+        { status: 400 }
       );
     }
 
     // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     const user = await prisma.user.create({
       data: {
         name: user_name,
         email: email_id,
-        password: hashedPassword
+        password: hashedPassword,
+        accountNumber: account_number,
+        accountType: account_type as AccountType,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        accountNumber: true,
+        accountType: true,
       },
     });
 
@@ -78,116 +72,55 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Login User
-export async function GET(req: NextRequest) {
-  try {
-    const body: unknown = await req.json();
-
-    // Validate input
-    const validatedData = loginSchema.parse(body);
-    const { email, password } = validatedData;
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
-
-    // Verify password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
-    }
-
-    // Return user without password
-    const { ...userWithoutPassword } = user;
-    return NextResponse.json(userWithoutPassword, { status: 200 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    }
-    console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
-  }
-}
-
-// Update User
 export async function PUT(req: NextRequest) {
   try {
     const body: unknown = await req.json();
 
     // Validate input
-    const validatedData = updateSchema.parse(body);
-    const { id, name, email } = validatedData;
+    const validatedData = forgetPasswordFormScheme.parse(body);
+    const { email_id, password, confirmPassword, pin, sendPin } = validatedData;
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { id },
-    });
-
-    if (!existingUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+    // Ensure passwords match
+    if (password !== confirmPassword) {
+      return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
     }
 
-    // Check if email is already taken by another user
-    const emailTaken = await prisma.user.findFirst({
-      where: {
-        email,
-        NOT: { id },
-      },
-    });
-
-    if (emailTaken) {
+    // Validate OTP
+    if (sendPin !== pin) {
       return NextResponse.json(
-        { error: 'Email is already taken' },
-        { status: 409 }
-      );
-    }
-
-    // Update user
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { name, email },
-      select: {
-        id: true,
-        name: true,
-        email: true
-      },
-    });
-
-    return NextResponse.json(updatedUser, { status: 200 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
+        { message: 'Invalid OTP' },
         { status: 400 }
       );
     }
+
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email_id },
+      select: { id: true },
+    });
+
+    if (!existingUser) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update user password and clear reset PIN
+    const updatedUser = await prisma.user.update({
+      where: { email: email_id },
+      data: { password: hashedPassword },
+      select: { id: true, name: true, email: true },
+    });
+
+    return NextResponse.json({ message: 'Password updated successfully', user: updatedUser }, { status: 200 });
+
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors[0].message }, { status: 400 });
+    }
     console.error('Error:', error);
-    return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }

@@ -115,10 +115,28 @@ export function SignUpForm() {
 
                 <FormField
                     control={form.control}
+                    name="account_number"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Account number<span className="text-red-500">*</span></FormLabel>
+                            <FormControl>
+                                <Input
+                                    required
+                                    placeholder="Account Number"
+                                    type="text"
+                                    {...field} />
+                            </FormControl>
+                            <FormDescription>Enter your account number </FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
                     name="account_type"
                     render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                            <FormLabel>Language</FormLabel>
+                        <FormItem>
+                            <FormLabel>Account Type</FormLabel>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <FormControl>
@@ -170,7 +188,7 @@ export function SignUpForm() {
                                     </Command>
                                 </PopoverContent>
                             </Popover>
-                            <FormDescription>This is the language that will be used in the dashboard.</FormDescription>
+                            <FormDescription>This is the account type that will be used for account detail.</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}

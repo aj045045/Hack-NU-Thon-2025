@@ -11,6 +11,7 @@ import { pageLinks } from "@/constants/links"
 import * as z from "zod"
 import { loginFormScheme } from "@/lib/form"
 import { signIn } from "next-auth/react";
+import { toast } from "sonner"
 
 interface LoginForm {
     email_id: string;
@@ -28,7 +29,11 @@ export function LoginForm() {
 
     const onSubmit = async (data: LoginForm) => {
         const res = await signIn("credentials", { email: data.email_id, password: data.password, redirect: false });
-        if (!res?.error) window.location.href = pageLinks.home;
+        if (!res?.error) {
+            window.location.href = pageLinks.home
+        } else {
+            toast.error(res.error);
+        };
     };
 
     // SESSIONS DATAS

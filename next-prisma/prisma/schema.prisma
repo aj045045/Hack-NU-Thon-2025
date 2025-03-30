@@ -14,7 +14,7 @@ model User {
   password       String
   accountNumber  String      @unique
   accountType    AccountType
-  maxAmountLimit Float
+  maxAmountLimit Float?       
   transactionsSent     Transaction[] @relation("SentTransactions")
   transactionsReceived Transaction[] @relation("ReceivedTransactions")
   fraudReports FraudDetection[]

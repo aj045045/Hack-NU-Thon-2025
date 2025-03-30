@@ -12,7 +12,7 @@ export default function OTPEmailComp({ task, code, emailId }: OTPEmailProps) {
                 <Body className="bg-neutral-200 py-5 select-none">
                     <Container className="items-center bg-white rounded-md flex text-center flex-col font-sans ">
                         <Section>
-                            <Img src="https://res.cloudinary.com/dvvaf3oih/image/upload/v1732465488/icon_hgrz7f.png" className="w-28 p-2 my-2 mx-auto" />
+                            <Img src="https://res.cloudinary.com/dq50dyxba/image/upload/v1743331599/logo_tqjree.png" className="w-60 p-2 my-2 mx-auto" />
                         </Section>
                         <Section>
                             <Heading className="text-3xl">Verify your email</Heading>
