@@ -1,37 +1,56 @@
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { PasswordInput } from "@/components/ui/password-input"
-import { Separator } from "@/components/ui/separator"
 import { useSession } from "next-auth/react"
+import { useEffect, useState, Suspense, useCallback } from "react"
+import { User, AccountType } from "@prisma/client"
+import { toast } from "sonner"
 
-// Mock user data - in production, this would come from an API or context
+// Define the type for user data from Prisma
+type UserWithCounts = User & {
+  _count: {
+    transactionsSent: number;
+    transactionsReceived: number;
+    fraudReports: number;
+  }
+  recentTransactions?: {
+    id: string;
+    amount: number;
+    date: string;
+    type: 'sent' | 'received';
+    to?: string;
+    from?: string;
+  }[];
+};
+
+// Fallback mock user data
 const mockUser = {
   id: "usr_123456789",
   name: "John Doe",
   email: "john.doe@example.com",
   password: "hashedPassword123",
   accountNumber: "ACC123456789",
-  accountType: "SAVINGS",
+  accountType: "SAVINGS" as AccountType,
   maxAmountLimit: 10000,
   pin: "123456",
-  transactionsSent: 24,
-  transactionsReceived: 18,
-  fraudReports: 0,
+  _count: {
+    transactionsSent: 24,
+    transactionsReceived: 18,
+    fraudReports: 0,
+  },
   recentTransactions: [
-    { id: "txn_1", amount: 1500, date: "2025-03-28", type: "sent", to: "Jane Smith" },
-    { id: "txn_2", amount: 2500, date: "2025-03-25", type: "received", from: "Alex Johnson" },
-    { id: "txn_3", amount: 500, date: "2025-03-20", type: "sent", to: "Michael Brown" }
+    { id: "txn_1", amount: 1500, date: "2025-03-28", type: 'sent' as const, to: "Jane Smith" },
+    { id: "txn_2", amount: 2500, date: "2025-03-25", type: 'received' as const, from: "Alex Johnson" },
+    { id: "txn_3", amount: 500, date: "2025-03-20", type: 'sent' as const, to: "Michael Brown" }
   ]
-}
+};
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -49,17 +68,52 @@ const passwordFormSchema = z.object({
 
 const accountFormSchema = z.object({
   maxAmountLimit: z.coerce.number().min(1000, { message: "Limit must be at least ₹1,000." }),
-  pin: z.string().min(6, { message: "PIN must be at least 6 characters." }).max(6, { message: "PIN must be maximum 6 characters." }),
 })
 
-export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false)
-  const {data: session} = useSession();
+// Loading component
+function LoadingProfile() {
+  return (
+    <div className="container py-20 mx-auto text-center">
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-full border-4 border-green-200 border-t-green-600 animate-spin"></div>
+        <h2 className="text-xl font-medium text-green-800">Loading your profile...</h2>
+        <p className="text-sm text-green-600">Please wait while we fetch your information</p>
+      </div>
+    </div>
+  );
+}
+
+// Not logged in component
+function NotLoggedIn() {
+  return (
+    <div className="container py-20 mx-auto text-center">
+      <div className="max-w-md mx-auto bg-green-100 rounded-lg p-8 shadow-sm">
+        <h2 className="text-2xl font-medium text-green-800 mb-4">Not Logged In</h2>
+        <p className="text-green-700 mb-6">Please log in to view your profile information.</p>
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => window.location.href = "/login"}>
+          Go to Login
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// The main profile content component
+function ProfileContent({ user, updateUserData }: { user: UserWithCounts; updateUserData: () => void }) {
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [isSubmittingAccount, setIsSubmittingAccount] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState<{ profile: boolean; password: boolean; account: boolean }>({
+    profile: false,
+    password: false,
+    account: false
+  });
+
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: mockUser.name,
-      email: mockUser.email,
+      name: user.name,
+      email: user.email,
     },
   })
 
@@ -75,37 +129,130 @@ export default function ProfilePage() {
   const accountForm = useForm<z.infer<typeof accountFormSchema>>({
     resolver: zodResolver(accountFormSchema),
     defaultValues: {
-      maxAmountLimit: mockUser.maxAmountLimit,
-      pin: mockUser.pin,
+      maxAmountLimit: user.maxAmountLimit || 0,
     },
   })
 
-  function onProfileSubmit(values: z.infer<typeof profileFormSchema>) {
-    // In a real app, you would update the profile using an API
-    console.log(values)
-    setIsEditing(false)
+  async function onProfileSubmit(values: z.infer<typeof profileFormSchema>) {
+    try {
+      // Only send data that has actually changed
+      const changedValues = {} as any;
+      if (values.name !== user.name) {
+        changedValues.name = values.name;
+      }
+      
+      // Don't allow email to be changed as it's tied to authentication
+      // We'll make the email field read-only in the form
+
+      // If nothing has changed, show a message and return
+      if (Object.keys(changedValues).length === 0) {
+        toast.info('No changes were made');
+        setSheetOpen(prev => ({ ...prev, profile: false }));
+        return;
+      }
+
+      setIsSubmittingProfile(true);
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(changedValues),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+      
+      toast.success('Profile updated successfully');
+      setSheetOpen(prev => ({ ...prev, profile: false }));
+      updateUserData(); // Refresh user data
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setIsSubmittingProfile(false);
+    }
   }
 
-  function onPasswordSubmit(values: z.infer<typeof passwordFormSchema>) {
-    // In a real app, you would update the password using an API
-    console.log(values)
+  async function onPasswordSubmit(values: z.infer<typeof passwordFormSchema>) {
+    try {
+      setIsSubmittingPassword(true);
+      const response = await fetch('/api/user/password', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+      
+      toast.success('Password updated successfully');
+      passwordForm.reset();
+      setSheetOpen(prev => ({ ...prev, password: false }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update password');
+    } finally {
+      setIsSubmittingPassword(false);
+    }
   }
 
-  function onAccountSubmit(values: z.infer<typeof accountFormSchema>) {
-    // In a real app, you would update the account info using an API
-    console.log(values)
+  async function onAccountSubmit(values: z.infer<typeof accountFormSchema>) {
+    try {
+      // Only send data that has actually changed
+      const changedValues = {} as any;
+      if (values.maxAmountLimit !== user.maxAmountLimit) {
+        changedValues.maxAmountLimit = values.maxAmountLimit;
+      }
+      
+      // If nothing has changed, show a message and return
+      if (Object.keys(changedValues).length === 0) {
+        toast.info('No changes were made');
+        setSheetOpen(prev => ({ ...prev, account: false }));
+        return;
+      }
+
+      setIsSubmittingAccount(true);
+      const response = await fetch('/api/user/update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(changedValues),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update account information');
+      }
+      
+      toast.success('Account information updated successfully');
+      setSheetOpen(prev => ({ ...prev, account: false }));
+      updateUserData(); // Refresh user data
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update account information');
+    } finally {
+      setIsSubmittingAccount(false);
+    }
   }
 
   const accountTypeLabel = {
     "SAVINGS": "Savings Account",
     "CURRENT": "Current Account",
     "BUSINESS": "Business Account"
-  }[mockUser.accountType]
+  }[user.accountType || "SAVINGS"]
 
   return (
     <div className="container py-10 mx-auto space-y-8 text-green-950">
       <div>
-        <h1 className="font-sans text-3xl mb-2">{session?.user?.email}</h1>
+        <h1 className="font-sans text-3xl mb-2">Welcome, {user.name}</h1>
         <p className="text-sm text-neutral-600">Manage your account information and settings</p>
       </div>
 
@@ -119,20 +266,20 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-green-800">User ID</h3>
-                <p className="text-base font-medium">{mockUser.id}</p>
+                <p className="text-base font-medium">{user.id}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Name</h3>
-                <p className="text-base font-medium">{mockUser.name}</p>
+                <p className="text-base font-medium">{user.name}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Email</h3>
-                <p className="text-base font-medium">{mockUser.email}</p>
+                <p className="text-base font-medium">{user.email}</p>
               </div>
             </div>
 
             <div className="mt-4">
-              <Sheet>
+              <Sheet open={sheetOpen.profile} onOpenChange={(open) => setSheetOpen(prev => ({ ...prev, profile: open }))}>
                 <SheetTrigger asChild>
                   <Button size="sm" variant="outline" className="border-green-400 text-green-700 bg-white hover:bg-green-50 hover:text-green-800">Edit Profile</Button>
                 </SheetTrigger>
@@ -164,17 +311,29 @@ export default function ProfilePage() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email<span className="text-red-500">*</span></FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input placeholder="john.doe@example.com" className="border-green-300 focus:border-green-400 focus:ring-green-200" {...field} />
+                              <Input 
+                                readOnly 
+                                disabled
+                                placeholder="john.doe@example.com" 
+                                className="border-green-300 focus:border-green-400 focus:ring-green-200 bg-gray-50" 
+                                {...field} 
+                              />
                             </FormControl>
-                            <FormDescription>Your email address</FormDescription>
+                            <FormDescription>Your email address (cannot be changed)</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                       <div className="flex justify-end mt-8">
-                        <Button type="submit" className="bg-green-600 hover:bg-green-700">Save Changes</Button>
+                        <Button 
+                          type="submit" 
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={isSubmittingProfile}
+                        >
+                          {isSubmittingProfile ? "Saving..." : "Save Changes"}
+                        </Button>
                       </div>
                     </form>
                   </Form>
@@ -193,7 +352,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-green-800">Account Number</h3>
-                <p className="text-base font-medium">{mockUser.accountNumber}</p>
+                <p className="text-base font-medium">{user.accountNumber}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Account Type</h3>
@@ -201,16 +360,12 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Maximum Transaction Limit</h3>
-                <p className="text-base font-medium">₹{mockUser.maxAmountLimit.toLocaleString()}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-green-800">PIN</h3>
-                <p className="text-base font-medium">••••••</p>
+                <p className="text-base font-medium">₹{user.maxAmountLimit?.toLocaleString() || '0'}</p>
               </div>
             </div>
 
             <div className="mt-4">
-              <Sheet>
+              <Sheet open={sheetOpen.account} onOpenChange={(open) => setSheetOpen(prev => ({ ...prev, account: open }))}>
                 <SheetTrigger asChild>
                   <Button size="sm" variant="outline" className="border-green-400 text-green-700 bg-white hover:bg-green-50 hover:text-green-800">Edit Account Info</Button>
                 </SheetTrigger>
@@ -237,22 +392,14 @@ export default function ProfilePage() {
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={accountForm.control}
-                        name="pin"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Account PIN<span className="text-red-500">*</span></FormLabel>
-                            <FormControl>
-                              <PasswordInput maxLength={6} placeholder="123456" className="border-green-300 focus:border-green-400 focus:ring-green-200" {...field} />
-                            </FormControl>
-                            <FormDescription>6-digit PIN for account transactions</FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       <div className="flex justify-end mt-8">
-                        <Button type="submit" className="bg-green-600 hover:bg-green-700">Update Account</Button>
+                        <Button 
+                          type="submit" 
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={isSubmittingAccount}
+                        >
+                          {isSubmittingAccount ? "Updating..." : "Update Account"}
+                        </Button>
                       </div>
                     </form>
                   </Form>
@@ -271,15 +418,15 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-green-800">Transactions Sent</h3>
-                <p className="text-base font-medium">{mockUser.transactionsSent}</p>
+                <p className="text-base font-medium">{user._count?.transactionsSent || 0}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Transactions Received</h3>
-                <p className="text-base font-medium">{mockUser.transactionsReceived}</p>
+                <p className="text-base font-medium">{user._count?.transactionsReceived || 0}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-green-800">Fraud Reports</h3>
-                <p className="text-base font-medium">{mockUser.fraudReports}</p>
+                <p className="text-base font-medium">{user._count?.fraudReports || 0}</p>
               </div>
             </div>
 
@@ -307,7 +454,7 @@ export default function ProfilePage() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-green-100">
-                          {mockUser.recentTransactions.map((transaction) => (
+                          {user.recentTransactions?.map((transaction) => (
                             <tr key={transaction.id} className="hover:bg-green-50">
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{transaction.date}</td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
@@ -340,7 +487,7 @@ export default function ProfilePage() {
             <p className="text-sm text-green-800">Change your password</p>
           </div>
           <div className="p-6 space-y-4">
-            <Sheet>
+            <Sheet open={sheetOpen.password} onOpenChange={(open) => setSheetOpen(prev => ({ ...prev, password: open }))}>
               <SheetTrigger asChild>
                 <Button size="sm" variant="outline" className="border-green-400 text-green-700 bg-white hover:bg-green-50 hover:text-green-800">Change Password</Button>
               </SheetTrigger>
@@ -396,7 +543,13 @@ export default function ProfilePage() {
                       )}
                     />
                     <div className="flex justify-end mt-8">
-                      <Button type="submit" className="bg-green-600 hover:bg-green-700">Update Password</Button>
+                      <Button 
+                        type="submit" 
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={isSubmittingPassword}
+                      >
+                        {isSubmittingPassword ? "Updating..." : "Update Password"}
+                      </Button>
                     </div>
                   </form>
                 </Form>
@@ -407,4 +560,52 @@ export default function ProfilePage() {
       </div>
     </div>
   )
+}
+
+// Main component that handles state and renders appropriate content
+export default function ProfilePage() {
+  const { data: session, status } = useSession();
+  const [userData, setUserData] = useState<UserWithCounts | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Function to fetch user data
+  const fetchUserData = useCallback(async () => {
+    if (!session?.user?.email) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await fetch(`/api/user?email=${encodeURIComponent(session.user.email)}`);
+      const data = await response.json();
+      
+      if (data.user) {
+        setUserData(data.user);
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      toast.error('Failed to load profile data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [session]);
+  
+  // Fetch user data on load and when session changes
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchUserData();
+    } else if (status !== "loading") {
+      // If session is done loading but no user exists
+      setIsLoading(false);
+    }
+  }, [session, status, fetchUserData]);
+  
+  // Render appropriate component based on state
+  if (isLoading || status === "loading") {
+    return <LoadingProfile />;
+  }
+  
+  if (!session) {
+    return <NotLoggedIn />;
+  }
+  
+  return <ProfileContent user={userData || mockUser} updateUserData={fetchUserData} />;
 }

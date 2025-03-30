@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/s/:path*',
-        destination: process.env.FLASK_API || '', // Rewrite to Flask API
+        destination: process.env.FLASK_API || 'http://localhost:5000', // Rewrite to Flask API with default
       },
     ];
   },

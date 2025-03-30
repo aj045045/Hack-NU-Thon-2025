@@ -14,12 +14,12 @@ import { signOut, useSession } from "next-auth/react";
  * The Global Navbar component 
  */
 export function NavbarComp() {
+    const { data: session } = useSession();
     const pages: { title: string, link: string }[] = [
-        { title: "About", link: "/" },
-        { title: "Contact", link: "/" },
+        { title: "About", link: pageLinks.about },
+        { title: "Contact", link: pageLinks.contact },
     ]
 
-    const { data: session } = useSession();
     return (
         <>
             <nav className="flex items-center justify-between bg-background/40 backdrop-blur-lg w-full border-b border-b-border  z-50 h-16 overflow-hidden fixed px-5">
@@ -35,6 +35,10 @@ export function NavbarComp() {
                     <NavigationMenu className="hidden lg:flex">
                         <NavigationMenuList>
                             <NavigationMenuItem className="group space-x-5 text-sm text-green-950">
+                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.profile}>Profile</Link>
+                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.transaction}>Transaction</Link>
+                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudReport}>Fraud Report</Link>
+
                                 {pages.map((item, index) => (
                                     <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={item.link} key={index}>{item.title}</Link>
                                 ))}

@@ -1,6 +1,6 @@
 "use client"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { zodResolver } from "@hookform/resolvers/zod" // Install with: npm install @hookform/resolvers
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { pageLinks } from "@/constants/links"
 // import { UtilityHandler } from "@/helpers/form-handler"
 import * as z from "zod"
 import { loginFormScheme } from "@/lib/form"
-import { signIn } from "next-auth/react";
+import { getSession, signIn } from "next-auth/react";
 import { toast } from "sonner"
 
 interface LoginForm {
@@ -30,18 +30,21 @@ export function LoginForm() {
     const onSubmit = async (data: LoginForm) => {
         const res = await signIn("credentials", { email: data.email_id, password: data.password, redirect: false });
         if (!res?.error) {
-            window.location.href = pageLinks.home
+            // Wait for session to update
+            const updatedSession = await getSession();
+
+            if (updatedSession?.user.isAdmin) {
+                window.location.href = pageLinks.admin.dashboard;
+            } else {
+                window.location.href = pageLinks.user.profile;
+            }
         } else {
             toast.error(res.error);
         };
     };
-
-    // SESSIONS DATAS
-    // const { data: session } = useSession();
     return (
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}
-                // UtilityHandler.onSubmitPost('/api/auth', payload, 'Handling Sign-Up Form Submission', 'You have successfully sign up try to login'))}
                 className="row-span-2 py-10 mx-auto space-y-8 text-green-950">
                 <div>
                     <div className="font-sans text-3xl">Login</div>
