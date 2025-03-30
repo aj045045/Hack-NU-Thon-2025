@@ -1,6 +1,6 @@
 import { assetsLinks } from "@/constants/assets";
 import Image from "next/image";
-import { LoginForm } from "./form";
+import { ForgetPasswordForm } from "./form";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function SignUpPage() {
                     />
                 </div>
                 <div className="p-6">
-                    <LoginForm />
+                    <ForgetPasswordForm />
                 </div>
             </div>
         </div>

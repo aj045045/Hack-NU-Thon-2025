@@ -22,7 +22,7 @@ export function NavbarComp() {
     const { data: session } = useSession();
     return (
         <>
-            <nav className="flex items-center justify-between bg-background/60 backdrop-blur-lg w-full border-b border-b-border  z-50 h-16 overflow-hidden fixed px-5">
+            <nav className="flex items-center justify-between bg-background/40 backdrop-blur-lg w-full border-b border-b-border  z-50 h-16 overflow-hidden fixed px-5">
 
                 {/*SECTION - Logo */}
                 <div className="flex items-center space-x-4">
