@@ -1,6 +1,8 @@
-import { Calendar, Home, Inbox, Search, Settings } from "lucide-react"
+import { Calendar, Home, Inbox, LogOutIcon, Search, Settings } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from "@/components/ui/sidebar"
 import { pageLinks } from "@/constants/links"
+import { Button } from "./ui/button"
+import { signOut } from "next-auth/react"
 
 // Menu items.
 const items = [
@@ -50,6 +52,14 @@ export function AdminSideBar() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             ))}
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild >
+                                    <Button onClick={() => signOut({ callbackUrl: "/login" })} variant={"destructive"} >
+                                        <LogOutIcon />
+                                        <span>Logout</span>
+                                    </Button>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>

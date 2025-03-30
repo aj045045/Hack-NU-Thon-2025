@@ -1,40 +1,33 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
-    const path = request.nextUrl.pathname;
-    const isCustomer = path.startsWith("/u");
-    // const isAdmin = path.startsWith("/admin",);
-    const token = request.cookies.get('token');
-    if (isCustomer && !token) {
-        return NextResponse.redirect(new URL('/login', request.url));
+export async function middleware(req: NextRequest) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+    if (!token) {
+        return NextResponse.redirect(new URL("/login", req.url));
     }
-    // if (isAdmin && !token) {
-    // return NextResponse.redirect(new URL('/login', request.url));
-    // }
-    NextResponse.next();
+
+    if (token.isAdmin) {
+        if (!new URL(req.url).pathname.startsWith("/admin")) {
+            return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+        }
+        return NextResponse.next();
+    }
+
+    if (!token.isAdmin) {
+        if (new URL(req.url).pathname.startsWith("/admin")) {
+            return NextResponse.redirect(new URL("/u/dashboard", req.url));
+        }
+        if (!new URL(req.url).pathname.startsWith("/u")) {
+            return NextResponse.redirect(new URL("/u/dashboard", req.url));
+        }
+        return NextResponse.next();
+    }
+
+    return NextResponse.next();
 }
 
 export const config = {
-    matcher: ['/admin/:path*', '/u/:path*']
-}
-
-
-
-// import { withAuth } from "next-auth/middleware";
-// import { NextResponse } from "next/server";
-
-// export default withAuth(
-//     function middleware() {
-//         return NextResponse.next(); // Allow the request if authenticated
-//     },
-//     {
-//         pages: {
-//             signIn: "/login", // Redirect to /login if not signed in
-//         },
-//     }
-// );
-
-// export const config = {
-//     matcher: ["/admin/:path*", "/u/:path*"], // Protect these routes
-// };
+    matcher: ["/admin/:path*", "/u/:path*"],
+};
