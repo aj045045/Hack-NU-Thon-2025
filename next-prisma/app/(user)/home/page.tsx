@@ -42,7 +42,7 @@ export default function HomePage() {
                 <h1 className="font-sans text-3xl mb-2">Welcome to Fraud Detection System</h1>
                 <p className="text-sm text-neutral-600">Manage your accounts and transactions securely</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold mb-4">Registered Users</h2>
                 <div className="overflow-x-auto">
@@ -63,8 +63,8 @@ export default function HomePage() {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.accountNumber}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {user.accountType === "SAVINGS" ? "Savings Account" : 
-                                         user.accountType === "CURRENT" ? "Current Account" : "Business Account"}
+                                        {user.accountType === "SAVINGS" ? "Savings Account" :
+                                            user.accountType === "CURRENT" ? "Current Account" : "Business Account"}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{user.maxAmountLimit.toLocaleString()}</td>
                                 </tr>

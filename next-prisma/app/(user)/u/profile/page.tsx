@@ -1,16 +1,14 @@
 "use client"
 
-import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { PasswordInput } from "@/components/ui/password-input"
-import { Separator } from "@/components/ui/separator"
+import { useSession } from "next-auth/react"
 
 // Mock user data - in production, this would come from an API or context
 const mockUser = {
@@ -52,8 +50,7 @@ const accountFormSchema = z.object({
 })
 
 export default function ProfilePage() {
-  const [isEditing, setIsEditing] = useState(false)
-  
+  const { data: session } = useSession();
   const profileForm = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
@@ -82,7 +79,6 @@ export default function ProfilePage() {
   function onProfileSubmit(values: z.infer<typeof profileFormSchema>) {
     // In a real app, you would update the profile using an API
     console.log(values)
-    setIsEditing(false)
   }
 
   function onPasswordSubmit(values: z.infer<typeof passwordFormSchema>) {
@@ -104,7 +100,7 @@ export default function ProfilePage() {
   return (
     <div className="container py-10 mx-auto space-y-8 text-green-950">
       <div>
-        <h1 className="font-sans text-3xl mb-2">My Profile</h1>
+        <h1 className="font-sans text-3xl mb-2">Welcome, {session?.user.email}</h1>
         <p className="text-sm text-neutral-600">Manage your account information and settings</p>
       </div>
 

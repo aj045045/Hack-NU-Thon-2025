@@ -36,7 +36,7 @@ export function LoginForm() {
             if (updatedSession?.user.isAdmin) {
                 window.location.href = pageLinks.admin.dashboard;
             } else {
-                window.location.href = pageLinks.home;
+                window.location.href = pageLinks.user.profile;
             }
         } else {
             toast.error(res.error);
