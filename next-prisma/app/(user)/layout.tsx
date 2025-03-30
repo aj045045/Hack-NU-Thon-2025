@@ -8,7 +8,7 @@ export default function UserLayout({ children, }: Readonly<{ children: React.Rea
         <>
             <SessionProvider>
                 <NavbarComp />
-                <div className="min-h-screen w-full pt-20 mb-20">
+                <div className="min-h-screen w-full pt-20 mb-20 text-green-950">
                     {children}
                 </div>
                 <FooterComp />

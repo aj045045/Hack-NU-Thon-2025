@@ -62,7 +62,7 @@ export function FooterComp() {
     return (
         <div className="container font-sans pb-8">
             <footer>
-                <div className="grid grid-cols-2 gap-8 px-5 pt-5 border-t lg:grid-cols-6 border-border/50">
+                <div className="grid grid-cols-2 gap-8 px-5 pt-5 border-t lg:grid-cols-6 border-border">
                     <div className="col-span-2 mb-8 lg:mb-0">
                         <div className="flex items-center gap-2 lg:justify-start">
                             <Link href={pageLinks.home} className="flex items-center">
@@ -82,24 +82,24 @@ export function FooterComp() {
                     {menuItems.map((section, sectionIdx) => (
                         <div key={sectionIdx}>
                             <h3 className="mb-4 font-bold">{section.title}</h3>
-                            <ul className="space-y-4 text-neutral-300/50 text-sm">
+                            <ul className="space-y-4 text-green-950 text-sm">
                                 {section.links.map((link, linkIdx) => (
                                     <div key={linkIdx}>
                                         {"src" in link ?
                                             (
-                                                <div className="flex items-center space-x-1 hover:text-white group">
+                                                <div className="flex items-center space-x-1 hover:text-green-950 group">
                                                     <Image src={link.src} alt={link.alt} width={20} height={20} className="bg-lime-300/50 group-hover:bg-lime-300 rounded-xs" />
                                                     <LinkPreview
                                                         width={300}
                                                         height={200}
                                                         url={link.url}
-                                                        className="hover:text-foreground text-neutral-300/50"
+                                                        className="hover:text-black text-green-900"
                                                     >
                                                         {link.text}
                                                     </LinkPreview>
                                                 </div>
                                             ) : (
-                                                <a href={link.url} className="flex items-center space-x-1 hover:text-white group">
+                                                <a href={link.url} className="flex items-center space-x-1 hover:text-black group">
                                                     <li>
                                                         {link.text}
                                                     </li>
@@ -112,7 +112,7 @@ export function FooterComp() {
                         </div>
                     ))}
                 </div>
-                <div className="flex flex-col justify-between gap-4 px-5 pt-8 mt-24 text-sm font-medium border-t border-border/30 text-foreground md:flex-row md:items-center">
+                <div className="flex flex-col justify-between gap-4 px-5 pt-8 mt-24 text-sm font-medium border-t border-border/80 text-foreground md:flex-row md:items-center">
                     <div className="flex items-center space-x-1">
                         <LucideCopyright size={12} />
                         <span>2025 Copyright. All rights reserved.</span>

@@ -22,7 +22,7 @@ export function NavbarComp() {
     const { data: session } = useSession();
     return (
         <>
-            <nav className="flex items-center justify-between bg-background/60 backdrop-blur-lg w-full border-b border-b-border/20  z-50 h-16 overflow-hidden fixed px-5">
+            <nav className="flex items-center justify-between bg-background/60 backdrop-blur-lg w-full border-b border-b-border  z-50 h-16 overflow-hidden fixed px-5">
 
                 {/*SECTION - Logo */}
                 <div className="flex items-center space-x-4">
@@ -34,9 +34,9 @@ export function NavbarComp() {
                     {/*SECTION - Desktop Menu Bar */}
                     <NavigationMenu className="hidden lg:flex">
                         <NavigationMenuList>
-                            <NavigationMenuItem className="group space-x-5 text-sm text-lime-100">
+                            <NavigationMenuItem className="group space-x-5 text-sm text-green-950">
                                 {pages.map((item, index) => (
-                                    <Link className="py-2 px-3 hover:bg-lime-900/50 rounded-full" href={item.link} key={index}>{item.title}</Link>
+                                    <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={item.link} key={index}>{item.title}</Link>
                                 ))}
                             </NavigationMenuItem>
                         </NavigationMenuList>
