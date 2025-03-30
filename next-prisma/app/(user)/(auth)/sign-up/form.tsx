@@ -13,23 +13,39 @@ import { useState } from "react"
 import { UtilityHandler } from "@/helpers/form-handler"
 import { OTPGeneratorUtil } from "@/helpers/otp-generator"
 import { OTPEmailProps } from "@/interfaces/email"
-import { signUpFromScheme } from "@/lib/form"
+import { signUpFormSchema } from "@/lib/form"
 import * as z from "zod"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
 
 
 export function SignUpForm() {
     const [sendOTP, setSendOTP] = useState(false);
-    const form = useForm<z.infer<typeof signUpFromScheme>>({
-        resolver: zodResolver(signUpFromScheme),
+    const form = useForm<z.infer<typeof signUpFormSchema>>({
+        resolver: zodResolver(signUpFormSchema),
         defaultValues: {
             user_name: "",
             email_id: "",
             password: "",
+            account_number: "",
+            account_type: "",
             pin: "",
             sendPin: ""
         }
     })
 
+    const languages = [
+        {
+            label: 'Savings',
+            value: 'SAVINGS'
+        },
+        {
+            label: 'Current',
+            value: 'CURRENT'
+        }
+    ];
     const showButton = form.watch("email_id")?.length > 12 ? false : true;
 
     const sendOTPButton = async () => {
@@ -99,6 +115,69 @@ export function SignUpForm() {
 
                 <FormField
                     control={form.control}
+                    name="account_type"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                            <FormLabel>Language</FormLabel>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <FormControl>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            className={cn(
+                                                "w-[200px] justify-between",
+                                                !field.value && "text-muted-foreground"
+                                            )}
+
+                                        >
+                                            {field.value
+                                                ? languages.find(
+                                                    (language) => language.value === field.value
+                                                )?.label
+                                                : "Select Account"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </FormControl>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[200px] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Search Account..." />
+                                        <CommandList>
+                                            <CommandEmpty>No Account found.</CommandEmpty>
+                                            <CommandGroup>
+                                                {languages.map((language) => (
+                                                    <CommandItem
+                                                        value={language.label}
+                                                        key={language.value}
+                                                        onSelect={() => {
+                                                            form.setValue("account_type", language.value);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                language.value === field.value
+                                                                    ? "opacity-100"
+                                                                    : "opacity-0"
+                                                            )}
+                                                        />
+                                                        {language.label}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                            <FormDescription>This is the language that will be used in the dashboard.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
                     name="password"
                     render={({ field }) => (
                         <FormItem>
@@ -152,3 +231,4 @@ export function SignUpForm() {
         </Form >
     )
 }
+

@@ -88,7 +88,7 @@ export function FooterComp() {
                                         {"src" in link ?
                                             (
                                                 <div className="flex items-center space-x-1 hover:text-green-950 group">
-                                                    <Image src={link.src} alt={link.alt} width={20} height={20} className="bg-lime-300/50 group-hover:bg-lime-300 rounded-xs" />
+                                                    <Image src={link.src} alt={link.alt} width={20} height={20} className="bg-green-400 group-hover:bg-green-600 rounded-xs " />
                                                     <LinkPreview
                                                         width={300}
                                                         height={200}
