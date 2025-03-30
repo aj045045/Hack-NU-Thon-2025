@@ -1,3 +1,7 @@
+// "use client"
+
+
+// import { prisma } from "@/lib/prisma";
 import { prisma } from "@/lib/prisma";
 import { Metadata } from "next"
 
