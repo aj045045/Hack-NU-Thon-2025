@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import Image from "next/image";
 
 export const metadata: Metadata = {
     title: "Aubergine AI | Financial Fraud Detection System"
@@ -35,13 +36,13 @@ const Homepage = () => {
                         <CarouselContent>
                             {[
                                 {
-                                    img: "/images/fraud-detection.jpg",
+                                    img: "/carousel_2.jpeg",
                                     title: "Real-time Transaction Monitoring",
                                     desc: "Our AI agents analyze thousands of transactions per second with sub-millisecond latency",
                                     features: ["Continuous monitoring", "Instant pattern recognition", "High-throughput processing"]
                                 },
                                 {
-                                    img: "/images/ai-agents.jpg",
+                                    img: "/carousel_1.jpeg",
                                     title: "Collaborative AI Architecture",
                                     desc: "Specialized agents work in concert - transaction analyzers, regulation checkers, and pattern detectors",
                                     features: ["Modular agent design", "Distributed decision-making", "Dynamic workload balancing"]
@@ -56,9 +57,12 @@ const Homepage = () => {
                                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                                     <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 h-full flex flex-col hover:-translate-y-1 transition-transform">
                                         <div className="h-64 relative overflow-hidden rounded-lg mb-4">
-                                            <img
+                                            <Image
+                                                width={100}
+                                                height={100}
                                                 src={item.img}
                                                 alt={item.title}
+                                                priority={true}
                                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                                             />
                                         </div>
@@ -151,7 +155,9 @@ const Homepage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                         <div>
                             <div className="bg-gray-100 rounded-xl p-8 border border-gray-200">
-                                <img
+                                <Image
+                                    width={100}
+                                    height={100}
                                     src="/images/system-architecture.png"
                                     alt="Multi-Agent System Architecture"
                                     className="rounded-lg shadow-sm"
