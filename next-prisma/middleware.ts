@@ -1,40 +1,38 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
-    // const path = request.nextUrl.pathname;
-    // const isCustomer = path.startsWith("/u");
-    // const isAdmin = path.startsWith("/admin",);
-    // const token = request.cookies.get('token');
-    // if (isCustomer && !token) {
-    //     return NextResponse.redirect(new URL('/login', request.url));
-    // }
-    // if (isAdmin && !token) {
-    // return NextResponse.redirect(new URL('/login', request.url));
-    // }
-    NextResponse.next();
+export async function middleware(req: NextRequest) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+    const url = new URL(req.url);
+    const pathname = url.pathname;
+
+    // If user is not authenticated, redirect to login
+    if (!token) {
+        return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Admin user logic: Only allow access to "/admin/*" routes
+    if (token.isAdmin) {
+        if (!pathname.startsWith("/admin")) {
+            return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+        }
+        return NextResponse.next();
+    }
+
+    // Non-admin user logic: Redirect away from "/admin/*"
+    if (pathname.startsWith("/admin")) {
+        return NextResponse.redirect(new URL("/u/dashboard", req.url));
+    }
+
+    // Regular users should only access "/u/*" routes
+    if (!pathname.startsWith("/u")) {
+        return NextResponse.redirect(new URL("/u/dashboard", req.url));
+    }
+
+    return NextResponse.next();
 }
 
 export const config = {
-    matcher: ['/admin/:path*', '/u/:path*']
-}
-
-
-
-// import { withAuth } from "next-auth/middleware";
-// import { NextResponse } from "next/server";
-
-// export default withAuth(
-//     function middleware() {
-//         return NextResponse.next(); // Allow the request if authenticated
-//     },
-//     {
-//         pages: {
-//             signIn: "/login", // Redirect to /login if not signed in
-//         },
-//     }
-// );
-
-// export const config = {
-//     matcher: ["/admin/:path*", "/u/:path*"], // Protect these routes
-// };
+    matcher: ["/admin/:path*", "/u/:path*"], // Apply middleware to all routes
+};
