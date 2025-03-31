@@ -38,6 +38,7 @@ export function NavbarComp() {
                                                 <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.profile}>Profile</Link>
                                                 <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.transaction}>Transaction</Link>
                                                 <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudDetection}>Fraud Report</Link>
+                                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.dashboard}>Dashboard</Link>
                                             </>
                                         ) : (
                                             <>
@@ -84,6 +85,7 @@ export function NavbarComp() {
                                                             <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.profile}>Profile</Link>
                                                             <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.transaction}>Transaction</Link>
                                                             <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudDetection}>Fraud Report</Link>
+                                                            <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.dashboard}>Dashboard</Link>
                                                         </>
                                                     ) : (
                                                         <>

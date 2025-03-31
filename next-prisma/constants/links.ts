@@ -5,7 +5,7 @@ export const pageLinks = {
     sign_up: '/sign-up',
     login: '/login',
     forget_password: '/forget-password',
-    dashboard: '/dashboard',
+    dashboard: '/u/dashboard',
     profile: '/profile',
     settings: '/settings',
     user_profile: '/u/profile',

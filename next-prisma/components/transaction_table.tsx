@@ -14,7 +14,9 @@ import {
   ChevronLeft, 
   ChevronRight, 
   ChevronsLeft, 
-  ChevronsRight 
+  ChevronsRight,
+  PlusCircle,
+  Trash2
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { 
@@ -26,6 +28,24 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TransactionMode } from "@prisma/client";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Transaction interface for API data
 interface Transaction {
@@ -45,6 +65,7 @@ interface Transaction {
     email?: string;
     accountNumber: string;
   } | null;
+  fraudScore?: number; // Add fraud score field
 }
 
 // Colors for transaction modes (matching dashboard)
@@ -66,6 +87,16 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Add this before the TransactionTable component
+interface AddTransactionFormData {
+  senderName: string;
+  senderAccountNumber: string;
+  receiverName: string;
+  receiverAccountNumber: string;
+  amount: string;
+  transactionMode: string;
+}
+
 export default function TransactionTable() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -74,7 +105,7 @@ export default function TransactionTable() {
   // Pagination state
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 5, // Fixed to 5 transactions per page
   });
   
   // Total count for pagination
@@ -84,6 +115,172 @@ export default function TransactionTable() {
   const [sortBy, setSortBy] = useState<string>("transactionDateTime");
   const [sortOrder, setSortOrder] = useState<string>("desc");
   const [transactionMode, setTransactionMode] = useState<string | null>(null);
+
+  // Form for adding a new transaction
+  const [isAddingTransaction, setIsAddingTransaction] = useState(false);
+  const [formData, setFormData] = useState<AddTransactionFormData>({
+    senderName: "",
+    senderAccountNumber: "",
+    receiverName: "",
+    receiverAccountNumber: "",
+    amount: "",
+    transactionMode: "NEFT"
+  });
+
+  // Fetch transactions from API
+  const fetchTransactions = async () => {
+    setLoading(true);
+    try {
+      // Build query parameters for sorting
+      const params = new URLSearchParams();
+      params.append("sortBy", sortBy);
+      params.append("sortOrder", sortOrder);
+      if (transactionMode) {
+        params.append("transactionMode", transactionMode);
+      }
+      
+      // Use the non-admin API endpoint
+      const response = await fetch(`/api/transactions?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching transactions: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Handle array response
+      const allTransactions = Array.isArray(data) ? data : (data.transactions || []);
+      
+      // Fixed page size of 5 for client-side pagination
+      const total = allTransactions.length;
+      const start = pagination.pageIndex * 5; // Always 5 items per page
+      const end = start + 5;
+      
+      setTotalCount(total);
+      setTransactions(allTransactions.slice(start, end));
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+  
+  // Add a new transaction
+  const handleAddTransaction = async () => {
+    try {
+      // Basic validation
+      if (!formData.senderAccountNumber || !formData.receiverAccountNumber || !formData.amount) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+      
+      // Check if amount is a valid number
+      if (isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
+        toast.error("Please enter a valid amount");
+        return;
+      }
+      
+      setLoading(true);
+      
+      const response = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to add transaction");
+      }
+      
+      // Success
+      toast.success("Transaction added successfully");
+      setIsAddingTransaction(false);
+      
+      // Reset form
+      setFormData({
+        senderName: "",
+        senderAccountNumber: "",
+        receiverName: "",
+        receiverAccountNumber: "",
+        amount: "",
+        transactionMode: "NEFT"
+      });
+      
+      // Refresh data
+      fetchTransactions();
+    } catch (err) {
+      console.error("Error adding transaction:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to add transaction");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Delete a transaction
+  const handleDeleteTransaction = async (id: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`/api/transactions/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete transaction");
+      }
+      
+      // Success
+      toast.success("Transaction deleted successfully");
+      
+      // Refresh data
+      fetchTransactions();
+    } catch (err) {
+      console.error("Error deleting transaction:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to delete transaction");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle transaction mode filter change
+  const handleTransactionModeChange = (value: string) => {
+    setTransactionMode(value === "all" ? null : value);
+    // Reset to first page when changing filters
+    setPagination({
+      ...pagination,
+      pageIndex: 0
+    });
+  };
+
+  // Handle sort change
+  const handleSortChange = (field: string) => {
+    // If clicking the same field, toggle order
+    if (field === sortBy) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("desc"); // Default to descending when changing field
+    }
+    // Reset to first page when changing sort
+    setPagination({
+      ...pagination,
+      pageIndex: 0
+    });
+  };
 
   // Define columns based on API data structure
   const columns: ColumnDef<Transaction>[] = [
@@ -175,104 +372,220 @@ export default function TransactionTable() {
         );
       }
     },
+    {
+      id: "fraudScore",
+      header: "Fraud Risk",
+      cell: ({ row }) => {
+        // Generate a random fraud score if one doesn't exist
+        const fraudScore = row.original.fraudScore ?? Math.floor(Math.random() * 101);
+        
+        // Determine risk level based on score
+        let riskLabel = "Low Risk";
+        let bgColor = "bg-green-100";
+        let textColor = "text-green-800";
+        
+        if (fraudScore > 80) {
+          riskLabel = "High Risk";
+          bgColor = "bg-red-100";
+          textColor = "text-red-800";
+        } else if (fraudScore > 50) {
+          riskLabel = "Medium Risk";
+          bgColor = "bg-orange-100";
+          textColor = "text-orange-800";
+        }
+        
+        return (
+          <span
+            className={`inline-flex items-center justify-between w-28 px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+          >
+            {riskLabel}
+            <span className="ml-1 font-bold">{fraudScore}</span>
+          </span>
+        );
+      }
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteTransaction(row.original.id)}
+                  disabled={loading}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete Transaction</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      }
+    },
   ];
-
-  // Fetch transactions from API
-  const fetchTransactions = async () => {
-    setLoading(true);
-    try {
-      // Calculate API pagination (1-indexed vs 0-indexed)
-      const page = pagination.pageIndex + 1;
-      const limit = pagination.pageSize;
-      
-      // Build query parameters
-      const params = new URLSearchParams();
-      params.append("page", page.toString());
-      params.append("limit", limit.toString());
-      params.append("sortBy", sortBy);
-      params.append("sortOrder", sortOrder);
-      if (transactionMode) {
-        params.append("transactionMode", transactionMode);
-      }
-      
-      const response = await fetch(`/api/admin/transactions?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`Error fetching transactions: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      setTransactions(data.transactions);
-      setTotalCount(data.pagination.total);
-    } catch (err) {
-      console.error("Error fetching transactions:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch data when pagination or filters change
-  useEffect(() => {
-    fetchTransactions();
-  }, [pagination.pageIndex, pagination.pageSize, sortBy, sortOrder, transactionMode]);
 
   // Set up table
   const table = useReactTable({
     data: transactions,
     columns,
-    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    pageCount: Math.ceil(totalCount / 5), // Always 5 items per page
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
+    // Prevent page size from being changed programmatically
     manualPagination: true,
     state: {
       pagination,
     },
   });
 
-  // Handle transaction mode filter change
-  const handleTransactionModeChange = (value: string) => {
-    setTransactionMode(value === "" ? null : value);
-    // Reset to first page when changing filters
-    setPagination({
-      ...pagination,
-      pageIndex: 0
-    });
-  };
-
-  // Handle sort change
-  const handleSortChange = (field: string) => {
-    // If clicking the same field, toggle order
-    if (field === sortBy) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(field);
-      setSortOrder("desc"); // Default to descending when changing field
-    }
-    // Reset to first page when changing sort
-    setPagination({
-      ...pagination,
-      pageIndex: 0
-    });
-  };
+  // Fetch data when filters change (but not for pagination which is now client-side)
+  useEffect(() => {
+    fetchTransactions();
+  }, [sortBy, sortOrder, transactionMode]);
 
   return (
     <Card className="p-4">
       <CardContent>
+        {/* Add Transaction Button */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Transaction Details</h2>
+          
+          <Dialog open={isAddingTransaction} onOpenChange={setIsAddingTransaction}>
+            <DialogTrigger asChild>
+              <Button className="flex items-center">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Transaction
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add New Transaction</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new transaction.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="senderName" className="text-right">
+                    Sender Name
+                  </Label>
+                  <Input
+                    id="senderName"
+                    name="senderName"
+                    value={formData.senderName}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="senderAccountNumber" className="text-right">
+                    Sender Account*
+                  </Label>
+                  <Input
+                    id="senderAccountNumber"
+                    name="senderAccountNumber"
+                    value={formData.senderAccountNumber}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="receiverName" className="text-right">
+                    Receiver Name
+                  </Label>
+                  <Input
+                    id="receiverName"
+                    name="receiverName"
+                    value={formData.receiverName}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="receiverAccountNumber" className="text-right">
+                    Receiver Account*
+                  </Label>
+                  <Input
+                    id="receiverAccountNumber"
+                    name="receiverAccountNumber"
+                    value={formData.receiverAccountNumber}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="amount" className="text-right">
+                    Amount*
+                  </Label>
+                  <Input
+                    id="amount"
+                    name="amount"
+                    type="number"
+                    value={formData.amount}
+                    onChange={handleInputChange}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="transactionMode" className="text-right">
+                    Mode*
+                  </Label>
+                  <Select
+                    value={formData.transactionMode}
+                    onValueChange={(value) => 
+                      setFormData({...formData, transactionMode: value})
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Select mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NEFT">NEFT</SelectItem>
+                      <SelectItem value="UPI">UPI</SelectItem>
+                      <SelectItem value="IMPS">IMPS</SelectItem>
+                      <SelectItem value="RTGS">RTGS</SelectItem>
+                      <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  type="submit" 
+                  onClick={handleAddTransaction} 
+                  disabled={loading}
+                >
+                  {loading ? "Adding..." : "Add Transaction"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+        
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <div className="flex items-center space-x-2">
             <label className="text-sm font-medium">Transaction Mode:</label>
             <Select
-              value={transactionMode || ""}
+              value={transactionMode || "all"}
               onValueChange={handleTransactionModeChange}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All Modes" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Modes</SelectItem>
+                <SelectItem value="all">All Modes</SelectItem>
                 <SelectItem value="NEFT">NEFT</SelectItem>
                 <SelectItem value="UPI">UPI</SelectItem>
                 <SelectItem value="IMPS">IMPS</SelectItem>
@@ -381,32 +694,9 @@ export default function TransactionTable() {
 
         {/* Pagination Controls */}
         <div className="flex items-center justify-between px-2 mt-4">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <p className="text-sm font-medium">Rows per page</p>
-              <Select
-                value={pagination.pageSize.toString()}
-                onValueChange={(value: string) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger className="h-8 w-[70px]">
-                  <SelectValue placeholder={pagination.pageSize} />
-                </SelectTrigger>
-                <SelectContent side="top">
-                  {[5, 10, 20, 50].map((pageSize) => (
-                    <SelectItem key={pageSize} value={pageSize.toString()}>
-                      {pageSize}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {Math.max(1, Math.ceil(totalCount / pagination.pageSize))}
-            </div>
+          <div className="text-sm text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {Math.max(1, Math.ceil(totalCount / 5))}
           </div>
 
           <div className="flex items-center space-x-2">

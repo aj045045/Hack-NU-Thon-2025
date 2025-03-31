@@ -14,58 +14,90 @@ function formatAccount(accountNumber: string): string {
 }
 
 // GET /api/transactions - Get all transactions
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  
+  // Parse query parameters
+  const sortBy = searchParams.get('sortBy') || 'transactionDateTime';
+  const sortOrder = searchParams.get('sortOrder') || 'desc';
+  const transactionMode = searchParams.get('transactionMode');
+  
   try {
-    console.log("API: Starting to fetch transactions");
-    
-    // First connect to the database explicitly
     await prisma.$connect();
     
-    // Find a reference user to ensure we have at least one in the system
-    const referenceUser = await prisma.user.findFirst().catch(() => null);
+    console.log("Fetching transactions...");
     
-    if (!referenceUser) {
-      console.log("No users found to reference for transactions");
-      return NextResponse.json([], { status: 200 }); // Return empty array if no users
+    // Build filter based on transactionMode if provided
+    const filter: any = {};
+    if (transactionMode) {
+      filter.transactionMode = transactionMode;
     }
     
-    // Fetch all transactions with simplified approach
-    const baseTransactions = await prisma.transaction.findMany({
+    // First fetch transactions without including user relations to improve reliability
+    const transactions = await prisma.transaction.findMany({
+      where: filter,
       orderBy: {
-        transactionDateTime: 'desc',
+        [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc'
       }
     });
     
-    // Use JSON.stringify and parse to handle MongoDB ObjectIds
-    const transactions = safeJson(baseTransactions);
+    // If no transactions, return empty array
+    if (!transactions || transactions.length === 0) {
+      return NextResponse.json([], { status: 200 });
+    }
     
-    console.log(`API: Successfully found ${transactions.length} transactions`);
+    // Build arrays of sender and receiver IDs
+    const senderIds = transactions.map((t: any) => t.senderId).filter(Boolean);
+    const receiverIds = transactions.map((t: any) => t.receiverId).filter(Boolean);
     
-    // Process transactions without requiring actual user objects
-    const processedTransactions = transactions.map((transaction: any, index: number) => {
+    // Fetch all users that are involved in these transactions
+    const users = await prisma.user.findMany({
+      where: {
+        id: {
+          in: [...senderIds, ...receiverIds]
+        }
+      }
+    });
+    
+    // Create a map of user IDs to user information for easier lookup
+    const userMap: any = {};
+    users.forEach((user: any) => {
+      userMap[user.id] = user;
+    });
+    
+    // Combine transaction data with user information
+    const transactionsWithUsers = transactions.map((transaction: any, index: number) => {
+      // Get user info for sender and receiver
+      const sender = userMap[transaction.senderId] || null;
+      const receiver = userMap[transaction.receiverId] || null;
+      
+      // Add a random fraud score for each transaction
+      const fraudScore = Math.floor(Math.random() * 101);
+      
       return {
         ...transaction,
-        displayNumber: transactions.length - index,
-        // Use account numbers for sender/receiver objects
-        sender: {
-          name: formatAccount(transaction.senderAccountNumber),
-          accountNumber: transaction.senderAccountNumber
-        },
-        receiver: {
-          name: formatAccount(transaction.receiverAccountNumber),
-          accountNumber: transaction.receiverAccountNumber
-        }
+        sender: sender ? { 
+          id: sender.id,
+          name: sender.name,
+          email: sender.email,
+          accountNumber: sender.accountNumber
+        } : null,
+        receiver: receiver ? {
+          id: receiver.id,
+          name: receiver.name,
+          email: receiver.email,
+          accountNumber: receiver.accountNumber
+        } : null,
+        fraudScore: fraudScore // Add random fraud score between 0-100
       };
     });
-
-    console.log("API: Processed transactions with virtual user data");
-    return NextResponse.json(processedTransactions);
+    
+    return NextResponse.json(safeJson(transactionsWithUsers), { status: 200 });
   } catch (error) {
-    console.error("API Error - Failed to fetch transactions:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transactions", details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+    console.error("Error in GET /api/transactions:", error);
+    return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
