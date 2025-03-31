@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-'use client'
-import { useSetAdminText } from "../layout";
-import { AreaChartComp } from "./are-chart";
-import { CardSpotlightFeaturesComp } from "./feature-card";
-
-export default function AdminPage() {
-    useSetAdminText("Dashboard");
-=======
 "use client";
 
 import { useState, useEffect, ReactNode } from "react";
@@ -242,21 +233,15 @@ export default function AdminDashboard() {
 
   // Loading state
   if (loading) {
->>>>>>> 5e1dd64 (Add dashboard)
     return (
-        <>
-            <div className="grid grid-cols-3 gap-4 w-full mb-10">
-                <CardSpotlightFeaturesComp />
-                <CardSpotlightFeaturesComp />
-                <CardSpotlightFeaturesComp />
-                <CardSpotlightFeaturesComp />
-            </div>
-            <AreaChartComp />
-            <AreaChartComp />
-        </>
+      <div className="grid min-h-screen w-full lg:grid-cols-[280px_1fr]">
+        <AdminSideBar />
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <p className="mt-4 text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
     );
-<<<<<<< HEAD
-=======
   }
 
   // Error state
@@ -605,5 +590,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
->>>>>>> 5e1dd64 (Add dashboard)
 }

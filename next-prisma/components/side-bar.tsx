@@ -1,40 +1,35 @@
-import { Calendar, Home, Inbox, LogOutIcon, Search, Settings } from "lucide-react"
+import { Home, LayoutDashboardIcon, LogOutIcon, Users, FileBarChart, UserPlus } from "lucide-react"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, } from "@/components/ui/sidebar"
 import { pageLinks } from "@/constants/links"
 import { Button } from "./ui/button"
 import { signOut } from "next-auth/react"
+import { AddUserSheet } from "@/components/add-user-sheet"
 
 // Menu items.
 const items = [
     {
         title: "Home",
-        url: pageLinks.admin.dashboard,
+        url: pageLinks.home,
         icon: Home,
     },
     {
-        title: "Inbox",
-        url: "#",
-        icon: Inbox,
+        title: "Dashboard",
+        url: pageLinks.admin.dashboard,
+        icon: LayoutDashboardIcon,
     },
     {
-        title: "Calendar",
-        url: "#",
-        icon: Calendar,
+        title: "Users",
+        url: pageLinks.admin.users,
+        icon: Users,
     },
     {
-        title: "Search",
-        url: "#",
-        icon: Search,
-    },
-    {
-        title: "Settings",
-        url: "#",
-        icon: Settings,
+        title: "Reports",
+        url: pageLinks.admin.reports,
+        icon: FileBarChart,
     },
 ]
 
 export function AdminSideBar() {
-
     return (
         <Sidebar collapsible="icon">
             <SidebarContent>
@@ -53,8 +48,13 @@ export function AdminSideBar() {
                                 </SidebarMenuItem>
                             ))}
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild >
-                                    <Button onClick={() => signOut({ callbackUrl: "/login" })} variant={"destructive"} >
+                                <SidebarMenuButton asChild>
+                                    <AddUserSheet />
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild>
+                                    <Button onClick={() => signOut({ callbackUrl: "/login" })} variant={"destructive"}>
                                         <LogOutIcon />
                                         <span>Logout</span>
                                     </Button>

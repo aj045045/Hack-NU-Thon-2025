@@ -15,12 +15,7 @@ import { signOut, useSession } from "next-auth/react";
  */
 export function NavbarComp() {
     const { data: session } = useSession();
-    // const pages: { title: string, link: string }[] = [
-    //     { title: "About", link: pageLinks.about },
-    //     { title: "Contact", link: pageLinks.contact },
-    // ]
 
-    const { data: session } = useSession();
     return (
         <>
             <nav className="flex items-center justify-between bg-background/40 backdrop-blur-lg w-full border-b border-b-border  z-50 h-16 overflow-hidden fixed px-5">
@@ -42,7 +37,7 @@ export function NavbarComp() {
                                             <>
                                                 <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.profile}>Profile</Link>
                                                 <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.transaction}>Transaction</Link>
-                                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudDetection}>Fraud Detections</Link>
+                                                <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudDetection}>Fraud Report</Link>
                                             </>
                                         ) : (
                                             <>
@@ -50,10 +45,6 @@ export function NavbarComp() {
                                             </>
                                         )
                                     )}
-
-                                {/* {pages.map((item, index) => (
-                                    <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={item.link} key={index}>{item.title}</Link>
-                                ))} */}
                             </NavigationMenuItem>
                         </NavigationMenuList>
                     </NavigationMenu>
@@ -86,9 +77,20 @@ export function NavbarComp() {
                                     <div className="mx-auto md:w-5/6 w-full overflow-y-scroll no-scrollbar">
                                         <DrawerHeader className="space-y-1">
                                             <DrawerTitle></DrawerTitle>
-                                            {/* {pages.map((item, index) => (
-                                                <Link href={item.link} className="bg-lime-900/50 text-lime-200 rounded-md px-4 py-2" key={index}>{item.title}</Link>
-                                            ))} */}
+                                            {session &&
+                                                (
+                                                    !session.user.isAdmin ? (
+                                                        <>
+                                                            <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.profile}>Profile</Link>
+                                                            <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.transaction}>Transaction</Link>
+                                                            <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.user.fraudDetection}>Fraud Report</Link>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Link className="py-2 px-3 hover:bg-green-500 rounded-full" href={pageLinks.admin.dashboard}>Dashboard</Link>
+                                                        </>
+                                                    )
+                                                )}
                                         </DrawerHeader>
                                         <DrawerFooter>
                                             <DrawerClose>
