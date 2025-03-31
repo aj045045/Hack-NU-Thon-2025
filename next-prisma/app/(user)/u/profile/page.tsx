@@ -41,9 +41,9 @@ const mockUser = {
   maxAmountLimit: 10000,
   pin: "123456",
   _count: {
-    transactionsSent: 24,
-    transactionsReceived: 18,
-    fraudReports: 0,
+  transactionsSent: 24,
+  transactionsReceived: 18,
+  fraudReports: 0,
   },
   recentTransactions: [
     { id: "txn_1", amount: 1500, date: "2025-03-28", type: 'sent' as const, to: "Jane Smith" },
