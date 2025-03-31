@@ -18,10 +18,13 @@ export const pageLinks = {
     },
     admin: {
         dashboard: '/admin/dashboard',
+        users: '/admin/users',
+        reports: '/admin/reports',
+        settings: '/admin/settings',
     },
     user: {
         profile: '/u/profile',
-        fraudReport: '/u/fraud-report',
         transaction: '/u/transaction',
+        fraudDetection: '/u/fraud-detection',
     }
 }
