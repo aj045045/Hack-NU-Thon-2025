@@ -48,7 +48,7 @@ const Homepage = () => {
                                     features: ["Modular agent design", "Distributed decision-making", "Dynamic workload balancing"]
                                 },
                                 {
-                                    img: "/images/compliance.jpg",
+                                    img: "/carousel_3.jpeg",
                                     title: "Automated Regulatory Compliance",
                                     desc: "Built-in knowledge of global financial regulations that auto-updates with new policies",
                                     features: ["KYC/AML compliance", "Sanctions screening", "Audit trail generation"]
@@ -156,9 +156,9 @@ const Homepage = () => {
                         <div>
                             <div className="bg-gray-100 rounded-xl p-8 border border-gray-200">
                                 <Image
-                                    width={100}
-                                    height={100}
-                                    src="/images/system-architecture.png"
+                                    width={500}
+                                    height={500}
+                                    src="/section.jpeg"
                                     alt="Multi-Agent System Architecture"
                                     className="rounded-lg shadow-sm"
                                 />
