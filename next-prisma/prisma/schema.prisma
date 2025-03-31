@@ -25,10 +25,10 @@ model User {
 
 model Transaction {
   id                    String          @id @default(auto()) @map("_id") @db.ObjectId
-  senderId              String          @db.ObjectId
-  receiverId            String          @db.ObjectId
-  sender                User            @relation("SentTransactions", fields: [senderId], references: [id])
-  receiver              User            @relation("ReceivedTransactions", fields: [receiverId], references: [id])
+  senderId              String?         @db.ObjectId
+  receiverId            String?          @db.ObjectId
+  sender                User?           @relation("SentTransactions", fields: [senderId], references: [id])
+  receiver              User?            @relation("ReceivedTransactions", fields: [receiverId], references: [id])
   senderAccountNumber   String
   receiverAccountNumber String
   amount                Float
